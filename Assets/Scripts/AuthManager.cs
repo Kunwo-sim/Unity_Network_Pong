@@ -21,11 +21,52 @@ public class AuthManager : MonoBehaviour
 
     public void Start()
     {
+        signInButton.interactable = false;
 
+        FirebaseApp.CheckAndFixDependenciesAsync().ContinueWith(task =>
+            {
+                var result = task.Result;
+                if (result != DependencyStatus.Available)
+                {
+                    Debug.LogError(result.ToString());
+                    IsFirebaseReady = false;
+                }
+                else
+                {
+                    IsFirebaseReady = true;
+                    firebaseApp = FirebaseApp.DefaultInstance;
+                    firebaseAuth = FirebaseAuth.DefaultInstance;
+                }
+                signInButton.interactable = IsFirebaseReady;
+            }
+        );
     }
 
     public void SignIn()
     {
+        if(!IsFirebaseReady || IsSignInOnProgress || User != null)
+        {
+            return;
+        }
+        IsSignInOnProgress = true;
+        signInButton.interactable = false;
 
+        firebaseAuth.SignInWithEmailAndPasswordAsync(emailField.text, passwordField.text).ContinueWithOnMainThread(
+            task =>
+            {
+                IsSignInOnProgress = false;
+                signInButton.interactable = true;
+                if(task.IsFaulted)
+                {
+                    Debug.LogError("Error");
+                }
+                else
+                {
+                    User = task.Result;
+                    Debug.Log(User.Email);
+                    SceneManager.LoadScene("Lobby");
+                }
+            }
+            );
     }
 }
